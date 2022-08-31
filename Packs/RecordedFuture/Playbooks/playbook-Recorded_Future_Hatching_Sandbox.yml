@@ -1,0 +1,459 @@
+id: Recorded Future Hatching Sandbox
+version: -1
+name: Recorded Future Hatching Sandbox
+starttaskid: "0"
+tasks:
+  "0":
+    id: "0"
+    taskid: 25377a96-0d49-4ea6-8abb-f7ac3efda3bf
+    type: start
+    task:
+      id: 25377a96-0d49-4ea6-8abb-f7ac3efda3bf
+      version: -1
+      name: ""
+      iscommand: false
+      brand: ""
+      description: ''
+    nexttasks:
+      '#none#':
+        - "10"
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 612.5,
+          "y": 50
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "1":
+    id: "1"
+    taskid: 7e6eb4b1-4b4a-4051-85a0-cce353f5ba84
+    type: regular
+    task:
+      id: 7e6eb4b1-4b4a-4051-85a0-cce353f5ba84
+      version: -1
+      name: Get Report (Behave1, Behave2, or Static)
+      description: Retrieves the generated Triage Report for a single task
+      script: Hatching Triage|||triage-get-report-triage
+      type: regular
+      iscommand: true
+      brand: Hatching Triage
+    nexttasks:
+      '#none#':
+        - "6"
+    scriptarguments:
+      sample_id:
+        simple: ${Triage.submissions.id}
+      task_id:
+        simple: behavioral1
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 612.5,
+          "y": 545
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    fieldMapping:
+      - incidentfield: Malware Family
+        output:
+          complex:
+            root: ${Triage.sample.reports.triage.extracted.config
+            accessor: family}
+            transformers:
+              - operator: uniq
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "6":
+    id: "6"
+    taskid: 133f881b-08ac-46d8-84ff-903155be8f88
+    type: regular
+    task:
+      id: 133f881b-08ac-46d8-84ff-903155be8f88
+      version: -1
+      name: Extract Indicators from Report
+      description: Extract all indicators according to server indicators configuration
+      script: Builtin|||extractIndicators
+      type: regular
+      iscommand: true
+      brand: Builtin
+    nexttasks:
+      '#none#':
+        - "15"
+        - "16"
+        - "17"
+    scriptarguments:
+      text:
+        simple: ${Triage.sample.reports.triage}
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 612.5,
+          "y": 720
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "8":
+    id: "8"
+    taskid: 69989f69-88e3-406a-8277-24440055e45d
+    type: regular
+    task:
+      id: 69989f69-88e3-406a-8277-24440055e45d
+      version: -1
+      name: Recorded Future IP Enrich
+      description: Gets a quick indicator of the risk associated with an IP address.
+      script: Recorded Future v2|||ip
+      type: regular
+      iscommand: true
+      brand: Recorded Future v2
+    nexttasks:
+      '#none#':
+        - "18"
+    scriptarguments:
+      ip:
+        simple: ${ExtractedIndicators.IP}
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 612.5,
+          "y": 1140
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "10":
+    id: "10"
+    taskid: 4556c873-9aaf-4ea5-8baf-4f24d7405234
+    type: regular
+    task:
+      id: 4556c873-9aaf-4ea5-8baf-4f24d7405234
+      version: -1
+      name: Submit File Sample
+      description: Submits a file or url for analysis
+      script: Hatching Triage|||triage-submit-sample
+      type: regular
+      iscommand: true
+      brand: Hatching Triage
+    nexttasks:
+      '#none#':
+        - "11"
+    scriptarguments:
+      data:
+        simple: ${File.EntryID}
+      kind:
+        simple: file
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 612.5,
+          "y": 200
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "11":
+    id: "11"
+    taskid: 80eb78d2-8a8e-4d65-8793-82149e080dbd
+    type: regular
+    task:
+      id: 80eb78d2-8a8e-4d65-8793-82149e080dbd
+      version: -1
+      name: Report Processing Time
+      description: Sleep for X seconds
+      scriptName: Sleep
+      type: regular
+      iscommand: false
+      brand: ""
+    nexttasks:
+      '#none#':
+        - "1"
+    scriptarguments:
+      seconds:
+        simple: "180"
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 612.5,
+          "y": 370
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "12":
+    id: "12"
+    taskid: 5d4f3a22-cba1-4c9b-86de-b3deec935b3e
+    type: regular
+    task:
+      id: 5d4f3a22-cba1-4c9b-86de-b3deec935b3e
+      version: -1
+      name: Recorded Future Malware Lookup
+      description: Prints text to war room (Markdown supported)
+      scriptName: Print
+      type: regular
+      iscommand: false
+      brand: Recorded Future v2
+    nexttasks:
+      '#none#':
+        - "18"
+    scriptarguments:
+      value:
+        simple: ${incident.malwarefamily}
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 1062.5,
+          "y": 1140
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "14":
+    id: "14"
+    taskid: 93bacfa5-455c-4f2d-8fd8-9c7dc68c7749
+    type: regular
+    task:
+      id: 93bacfa5-455c-4f2d-8fd8-9c7dc68c7749
+      version: -1
+      name: Recorded Future Domain Enrich
+      description: Gets a quick indicator of the risk associated with a domain.
+      script: Recorded Future v2|||domain
+      type: regular
+      iscommand: true
+      brand: Recorded Future v2
+    nexttasks:
+      '#none#':
+        - "18"
+    scriptarguments:
+      domain:
+        simple: ${ExtractedIndicators.Domain}
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 162.5,
+          "y": 1140
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "15":
+    id: "15"
+    taskid: 681adaa5-5b05-4639-89ea-63ce91dd2407
+    type: condition
+    task:
+      id: 681adaa5-5b05-4639-89ea-63ce91dd2407
+      version: -1
+      name: Is there a domain?
+      description: ""
+      type: condition
+      iscommand: false
+      brand: ""
+    nexttasks:
+      '#default#':
+        - "18"
+      "yes":
+        - "14"
+    separatecontext: false
+    conditions:
+      - label: "yes"
+        condition:
+          - - operator: isNotEmpty
+              left:
+                value:
+                  simple: ${ExtractedIndicators.Domain}
+                iscontext: true
+    view: |-
+      {
+        "position": {
+          "x": 162.5,
+          "y": 895
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "16":
+    id: "16"
+    taskid: d7c46b74-9358-45f2-8130-5bbcf8c93ead
+    type: condition
+    task:
+      id: d7c46b74-9358-45f2-8130-5bbcf8c93ead
+      version: -1
+      name: Is there an ip?
+      description: ""
+      type: condition
+      iscommand: false
+      brand: ""
+    nexttasks:
+      '#default#':
+        - "18"
+      "yes":
+        - "8"
+    separatecontext: false
+    conditions:
+      - label: "yes"
+        condition:
+          - - operator: isNotEmpty
+              left:
+                value:
+                  simple: ${ExtractedIndicators.IP}
+                iscontext: true
+    view: |-
+      {
+        "position": {
+          "x": 612.5,
+          "y": 895
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "17":
+    id: "17"
+    taskid: bbd881d2-cd39-4589-8954-4e704d6fc49d
+    type: condition
+    task:
+      id: bbd881d2-cd39-4589-8954-4e704d6fc49d
+      version: -1
+      name: Is there a malware family?
+      description: ""
+      type: condition
+      iscommand: false
+      brand: ""
+    nexttasks:
+      '#default#':
+        - "18"
+      "yes":
+        - "12"
+    separatecontext: false
+    conditions:
+      - label: "yes"
+        condition:
+          - - operator: isNotEmpty
+              left:
+                value:
+                  simple: incident.malwarefamily
+              right:
+                value: { }
+    view: |-
+      {
+        "position": {
+          "x": 1062.5,
+          "y": 895
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+  "18":
+    id: "18"
+    taskid: 06cdb84c-575c-4e6d-82e8-a937315f8a83
+    type: title
+    task:
+      id: 06cdb84c-575c-4e6d-82e8-a937315f8a83
+      version: -1
+      name: Done
+      type: title
+      iscommand: false
+      brand: ""
+      description: ''
+    separatecontext: false
+    view: |-
+      {
+        "position": {
+          "x": 830,
+          "y": 1490
+        }
+      }
+    note: false
+    timertriggers: [ ]
+    ignoreworker: false
+    skipunavailable: false
+    quietmode: 0
+    isoversize: false
+    isautoswitchedtoquietmode: false
+view: |-
+  {
+    "linkLabelsPosition": {
+      "15_14_yes": 0.62,
+      "15_18_#default#": 0.2,
+      "16_18_#default#": 0.3,
+      "16_8_yes": 0.59,
+      "17_12_yes": 0.61,
+      "17_18_#default#": 0.3
+    },
+    "paper": {
+      "dimensions": {
+        "height": 1505,
+        "width": 1280,
+        "x": 162.5,
+        "y": 50
+      }
+    }
+  }
+inputs: [ ]
+outputs: [ ]
+tests:
+  - No tests (auto formatted)
+fromversion: 6.5.0
+description: ""
