@@ -7,6 +7,7 @@ from CommonServerPython import *  # noqa: F401
 import copy
 import platform
 from typing import *
+import concurrent.futures
 
 # flake8: noqa: F402,F405 lgtm
 
@@ -235,6 +236,27 @@ class Client(BaseClient):
 
         return response
 
+    def lookup_alert_by_id(self, alert_id: str) -> dict:
+        """
+        Look up alert details by alert_id via /v3/alert/lookup endpoint.
+        """
+        json_data = {"alert_id": alert_id}
+        return self._call(url_suffix="/v3/alert/lookup", json_data=json_data)
+
+    def fetch_alert_image(self, image_id: str) -> bytes:
+        """
+        Fetches an image from the v3 alert image endpoint.
+        Returns the raw binary content of the image.
+        """
+        response_content: Any = self._http_request(
+            method="get",
+            url_suffix="/v3/alert/image",
+            params={"image_id": image_id},
+            timeout=90,
+            resp_type="content",
+        )
+        return response_content
+
     def fetch_incidents(self) -> Dict[str, Any]:
         """Fetch incidents."""
         return self._call(
@@ -325,6 +347,109 @@ class Client(BaseClient):
 class Actions:
     def __init__(self, rf_client: Client):
         self.client = rf_client
+
+    @staticmethod
+    def _get_file_name_from_image_id(image_id: str) -> str:
+        """Build a file name from the given image_id."""
+        return f"{image_id.replace('img:', '')}.png"
+
+    def _fetch_and_create_attachment(self, image_id: str) -> Optional[dict]:
+        """
+        Fetch an alert image via the client and create an attachment dictionary.
+        Returns None on error.
+        """
+        try:
+            image_content = self.client.fetch_alert_image(image_id)
+            file_name = self._get_file_name_from_image_id(image_id)
+            file_result_obj = fileResult(file_name, image_content)
+            demisto.results(file_result_obj)  # Important
+            attachment = {
+                "description": "Alert image",
+                "name": file_result_obj.get("File"),
+                "path": file_result_obj.get("FileID"),
+                "showMediaFile": True,
+            }
+            return attachment
+        except Exception as e:
+            demisto.error(f"Failed to fetch image {image_id}: {str(e)}")
+            return None
+
+    def fetch_alert_images_command(self) -> list:
+        """
+        Extract new image IDs from the incident's rawJSON, compare them with existing attachments,
+        fetch missing images concurrently (using 5 threads), and return only the new attachments.
+
+        The command returns new attachments as outputs (under key 'newAttachments') so that a
+        follow-up playbook step can use these to update the incident.
+        """
+        incident = demisto.incident()
+        raw_json_str = incident.get("rawJSON", "{}")
+
+        try:
+            alert_data = json.loads(raw_json_str)
+        except Exception as exc:
+            err_msg = f"Failed to decode raw JSON from incident: {exc}"
+            demisto.error(err_msg)
+            return [CommandResults(readable_output=err_msg)]
+
+        # Extract image IDs from alert data.
+        image_ids = []
+        for top_entity in alert_data.get("entities", []):
+            for doc in top_entity.get("documents", []):
+                for ref in doc.get("references", []):
+                    for inner_entity in ref.get("entities", []):
+                        if inner_entity.get("type") == "Image":
+                            image_id = inner_entity.get("id")
+                            if image_id:
+                                demisto.debug(f"Found image id: {image_id}")
+                                image_ids.append(image_id)
+
+        if not image_ids:
+            return [CommandResults(readable_output="No screenshots found in alert details.")]
+
+        # Get the names of attachments already present in the incident.
+        existing_attachments = incident.get("attachment", []) or []
+        existing_file_names = {att.get("name") for att in existing_attachments if att.get("name")}
+
+        # Determine missing image IDs.
+        missing_image_ids = set()
+        for img_id in image_ids:
+            # Limit to only 25 images.
+            if len(missing_image_ids) >= 25:
+                break
+
+            file_name = self._get_file_name_from_image_id(img_id)
+            if file_name not in existing_file_names:
+                missing_image_ids.add(img_id)
+
+        if not missing_image_ids:
+            return [CommandResults(readable_output="No new images to fetch.")]
+
+        # Fetch missing images concurrently using thread pool.
+        new_attachments = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {}
+
+            for img_id in missing_image_ids:
+                future = executor.submit(self._fetch_and_create_attachment, img_id)
+                futures[future] = img_id
+
+            for future in concurrent.futures.as_completed(futures):
+                attachment = future.result()
+                if attachment:
+                    new_attachments.append(attachment)
+
+        if new_attachments:
+            message = f"Fetched {len(new_attachments)} new image(s)."
+            # Return new attachments as outputs.
+            return [
+                CommandResults(
+                    readable_output=message,
+                    outputs={"RecordedFuture.attachment": new_attachments}
+                )
+            ]
+        else:
+            return [CommandResults(readable_output="No new images were fetched.")]
 
     def _process_result_actions(self, response: Union[dict, CommandResults]) -> List[CommandResults]:
         if isinstance(response, CommandResults):
@@ -538,6 +663,8 @@ def main() -> None:  # pragma: no cover
             return_results(actions.detection_rules_command())
         elif command == "recordedfuture-collective-insight":
             return_results(actions.collective_insight_command())
+        elif command == "recordedfuture-fetch-alert-images":
+            return_results(actions.fetch_alert_images_command())
 
     except Exception as e:
         return_error(

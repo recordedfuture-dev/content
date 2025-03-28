@@ -2682,6 +2682,14 @@ script:
       description: Recorded Future link entity risk score.
       type: Number
 
+  - name: recordedfuture-fetch-alert-images
+    description: Get Insikt Group Research Links for an IP, Domain, CVE, URL, File, or Malware.
+    arguments:
+    outputs:
+      - contextPath: RecordedFuture.attachment
+        description: "List of new alert image attachments. Each attachment contains keys such as 'name', 'path', and 'description'."
+        type: Unknown
+
   - name: recordedfuture-single-alert
     description: Get detailed information from vulnerability, typosquat and credential alerts.
     arguments:
